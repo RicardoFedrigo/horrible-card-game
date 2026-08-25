@@ -19,12 +19,12 @@ import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGlobe } from "@fortawesome/free-solid-svg-icons";
 import { useSocket } from "../hooks/useSocket";
+import { HomeReveal } from "../components/HomeReveal";
 import {
   pageContainerStyles,
   decorativeCircle1Styles,
   decorativeCircle2Styles,
   logoContainerStyles,
-  titleStyles,
   subtitleStyles,
   connectionStatusStyles,
   getConnectionIconStyles,
@@ -126,19 +126,7 @@ export const HomePage = () => {
 
       {/* Logo & Title */}
       <Container maxWidth="sm" sx={logoContainerStyles}>
-        <Typography variant="h1" sx={titleStyles}>
-          <Box component="span" sx={{ color: "primary.main" }}>
-            CARDS
-          </Box>
-          <br />
-          <Box component="span" sx={{ color: "secondary.main" }}>
-            AGAINST
-          </Box>
-          <br />
-          <Box component="span" sx={{ color: "primary.main" }}>
-            HUMANITY
-          </Box>
-        </Typography>
+        <HomeReveal />
 
         <Typography variant="body1" sx={subtitleStyles}>
           {t("home.subtitle")}
