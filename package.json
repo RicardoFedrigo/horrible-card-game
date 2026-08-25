@@ -1,0 +1,19 @@
+{
+  "name": "horrible-card-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cards Against Humanity — monorepo (socket.io server + React web)",
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "bun run dev:server & bun run dev:web & wait",
+    "dev:server": "bun run --cwd apps/backend dev",
+    "dev:web": "bun run --cwd apps/frontend dev",
+    "build:server": "bun run --cwd apps/backend build",
+    "build:web": "bun run --cwd apps/frontend build",
+    "build": "bun run build:server && bun run build:web",
+    "lint": "bun run --cwd apps/frontend lint"
+  }
+}
