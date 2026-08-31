@@ -94,6 +94,7 @@ jobs:
         with:
           path: apps/frontend/dist
           destination: ${{ env.GCS_BUCKET }}
+          parent: false
 
       - name: Configure website (SPA fallback)
         run: |
