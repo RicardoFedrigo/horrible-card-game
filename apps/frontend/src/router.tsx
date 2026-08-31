@@ -2,6 +2,7 @@ import {
   createRouter,
   createRoute,
   createRootRoute,
+  createHashHistory,
   redirect,
 } from "@tanstack/react-router";
 import { RootLayout } from "./layouts/RootLayout";
@@ -40,7 +41,7 @@ const lobbyRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([indexRoute, homeRoute, lobbyRoute, gameRoute]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree, history: createHashHistory() });
 
 declare module "@tanstack/react-router" {
   interface Register {
