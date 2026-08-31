@@ -1,14 +1,8 @@
 name: Build and Deploy to GCP
 
-# Assumindo estrutura do repo:
-#   /front  -> Dockerfile do frontend (bun run build)
-#   /back   -> Dockerfile do backend (bun run start)
-# Deploy feito em duas Cloud Run services separadas (front-service / back-service).
-# Ajuste os paths e nomes conforme a estrutura real do seu projeto.
-
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch: {}
 
 env:
@@ -24,7 +18,11 @@ jobs:
       contents: read
     strategy:
       matrix:
-        service: [frontend, backend] 
+        include:
+          - service: backend
+            path: apps/backend
+          - service: frontend
+            path: apps/frontend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,17 +44,16 @@ jobs:
 
       - name: Build image
         run: |
+          BUILD_ARGS=""
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            BUILD_ARGS="--build-arg VITE_SOCKET_URL=${{ vars.BACKEND_URL }}"
+          fi
           docker build \
-            -f ./${{ matrix.service }}/Dockerfile \
+            -f ./${{ matrix.path }}/Dockerfile \
             -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} \
             -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:latest \
-            --build-arg VITE_API_URL=${{ secrets.BACKEND_URL }} \
-            ./${{ matrix.service }}
-        # O --build-arg só faz sentido no build do "front" (React precisa
-        # saber a URL do back em tempo de build). Se o Dockerfile do "back"
-        # não usa esse ARG, o Docker simplesmente ignora — sem problema.
-        # Ajuste o nome da variável (VITE_API_URL / REACT_APP_API_URL) para
-        # o que seu bundler (Vite/CRA) realmente espera.
+            $BUILD_ARGS \
+            .
 
       - name: Push image
         run: |
@@ -72,31 +69,31 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        service: [frontend, backend] 
+        include:
+          - service: backend
+            path: apps/backend
+          - service: frontend
+            path: apps/frontend
     steps:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Deploy front to Cloud Run
-        if: matrix.service == 'front'
+      - name: Deploy frontend to Cloud Run
+        if: matrix.service == 'frontend'
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: front-service
+          service: frontend-service
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/front:${{ github.sha }}
-          flags: --allow-unauthenticated
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
+          flags: --allow-unauthenticated --port=80
 
-      - name: Deploy back to Cloud Run
-        if: matrix.service == 'back'
+      - name: Deploy backend to Cloud Run
+        if: matrix.service == 'backend'
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: back-service
+          service: backend-service
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/back:${{ github.sha }}
-          env_vars: |
-            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          # session-affinity + timeout maior ajudam a manter conexões
-          # WebSocket (socket.io) estáveis no Cloud Run
-          flags: --allow-unauthenticated --session-affinity --timeout=3600
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+          flags: --allow-unauthenticated --session-affinity --timeout=3600 --port=3000
