@@ -11,7 +11,7 @@ interface RoomActivityPayload {
   players: Player[];
 }
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "localhost:3000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://backend-service-692764692317.us-central1.run.app";
 const SOCKET_RECONNECTION_DELAY = parseInt(
   import.meta.env.VITE_SOCKET_RECONNECTION_DELAY || "1000",
   10
