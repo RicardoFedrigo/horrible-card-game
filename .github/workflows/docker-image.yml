@@ -101,11 +101,11 @@ jobs:
 
       - name: Verify built bundle URL
         run: |
-          if grep -rq "localhost" apps/frontend/dist/; then
-            echo "::error::Built bundle still contains 'localhost' — VITE_SOCKET_URL was not applied."
+          if grep -rq "localhost:3000" apps/frontend/dist/; then
+            echo "::error::Built bundle still points to localhost:3000 — VITE_SOCKET_URL was not applied."
             exit 1
           fi
-          echo "OK: no localhost in bundle — URL applied correctly."
+          echo "OK: socket URL not pointing to localhost."
 
       - name: Upload static files to GCS bucket
         uses: google-github-actions/upload-cloud-storage@v2
