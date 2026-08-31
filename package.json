@@ -15,5 +15,13 @@
     "build:web": "bun run --cwd apps/frontend build",
     "build": "bun run build:server && bun run build:web",
     "lint": "bun run --cwd apps/frontend lint"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "@swc/core": true,
+    "fsevents": true
   }
 }
