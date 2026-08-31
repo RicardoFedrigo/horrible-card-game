@@ -1,21 +1,20 @@
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json package-lock.json ./
 COPY apps/frontend/package.json apps/frontend/package.json
 COPY apps/backend/package.json apps/backend/package.json
 
-RUN npm install -g bun
-RUN bun install --frozen-lockfile --filter @horrible-card-game/web
+RUN npm ci --workspace @horrible-card-game/web --include-workspace-root=false
 
 COPY apps/frontend apps/frontend
 
 ARG VITE_SOCKET_URL
 ENV VITE_SOCKET_URL=${VITE_SOCKET_URL}
 
-RUN cd apps/frontend && bun run build
+RUN npm run build --workspace @horrible-card-game/web
 
-FROM node:24-alpine
+FROM node:26-alpine
 WORKDIR /app
 
 COPY --from=build /app/apps/frontend/dist ./dist

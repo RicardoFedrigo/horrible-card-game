@@ -9,26 +9,20 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ secrets.GCP_REGION }}
   REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY }}
+  GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
 
 jobs:
-  build-and-push:
-    name: Build & Push (${{ matrix.service }})
+  backend:
+    name: Backend (build, push & deploy)
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      matrix:
-        include:
-          - service: backend
-            path: apps/backend
-          - service: frontend
-            path: apps/frontend
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
-        id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -42,58 +36,67 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
+      - name: Build backend image
         run: |
-          BUILD_ARGS=""
-          if [ "${{ matrix.service }}" = "frontend" ]; then
-            BUILD_ARGS="--build-arg VITE_SOCKET_URL=${{ vars.BACKEND_URL }}"
-          fi
           docker build \
-            -f ./${{ matrix.path }}/Dockerfile \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:latest \
-            $BUILD_ARGS \
+            -f ./apps/backend/Dockerfile \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }} \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:latest \
             .
 
-      - name: Push image
+      - name: Push backend image
         run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.service }}:latest
-
-  deploy:
-    name: Deploy (${{ matrix.service }})
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    strategy:
-      matrix:
-        include:
-          - service: backend
-            path: apps/backend
-          - service: frontend
-            path: apps/frontend
-    steps:
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Deploy frontend to Cloud Run
-        if: matrix.service == 'frontend'
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: frontend-service
-          region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
-          flags: --allow-unauthenticated --port=80
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:latest
 
       - name: Deploy backend to Cloud Run
-        if: matrix.service == 'backend'
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: backend-service
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
           flags: --allow-unauthenticated --session-affinity --timeout=3600 --port=3000
+
+  frontend:
+    name: Frontend (build & upload to GCS)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --workspace @horrible-card-game/web --include-workspace-root=false
+
+      - name: Build frontend
+        env:
+          VITE_SOCKET_URL: ${{ vars.BACKEND_URL }}
+        run: npm run build --workspace @horrible-card-game/web
+
+      - name: Upload static files to GCS bucket
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: apps/frontend/dist
+          destination: ${{ env.GCS_BUCKET }}
+
+      - name: Configure website (SPA fallback)
+        run: |
+          gcloud storage buckets update gs://${{ env.GCS_BUCKET }} \
+            --web-main-page-suffix=index.html \
+            --web-error-page=index.html

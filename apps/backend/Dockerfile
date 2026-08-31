@@ -1,18 +1,17 @@
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json package-lock.json ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 
-RUN npm install -g bun
-RUN bun install --frozen-lockfile --filter @horrible-card-game/server
+RUN npm ci --workspace @horrible-card-game/server --include-workspace-root=false
 
 COPY apps/backend apps/backend
 
-RUN cd apps/backend && bun run build
+RUN npm run build --workspace @horrible-card-game/server
 
-FROM node:24-alpine
+FROM node:26-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
