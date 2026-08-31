@@ -2,7 +2,7 @@ name: Build and Deploy to GCP
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
 
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
