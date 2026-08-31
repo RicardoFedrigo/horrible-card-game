@@ -95,9 +95,9 @@ jobs:
           fi
 
       - name: Build frontend
-        env:
-          VITE_SOCKET_URL: ${{ vars.BACKEND_URL }}
-        run: npm run build --workspace @horrible-card-game/web
+        run: |
+          printf 'VITE_SOCKET_URL=%s\n' "${{ vars.BACKEND_URL }}" > apps/frontend/.env.production
+          npm run build --workspace @horrible-card-game/web
 
       - name: Verify built bundle URL
         run: |
