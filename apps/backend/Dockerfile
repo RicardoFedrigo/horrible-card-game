@@ -1,16 +1,24 @@
-FROM node:22-alpine
-
+FROM oven/bun:1-alpine AS build
 WORKDIR /app
 
-COPY package.json ./
-COPY pnpm-lock.yaml ./
+COPY package.json bun.lock ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
 
-RUN npm install -g pnpm
+RUN bun install --frozen-lockfile --filter @horrible-card-game/server
 
-RUN pnpm install
+COPY apps/backend apps/backend
 
-COPY . .
+RUN cd apps/backend && bun run build
+
+FROM oven/bun:1-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=build /app/apps/backend/dist ./dist
+COPY --from=build /app/apps/backend/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["pnpm", "dev"]
+CMD ["bun", "dist/server.js"]
