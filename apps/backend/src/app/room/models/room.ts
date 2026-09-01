@@ -5,6 +5,7 @@ import { ConfigRoom } from '../types/config-room.types';
 import { Card } from '../../game/card/models/card';
 import { Answer } from '../../../db/static-db/answer';
 import { Asks } from '../../../db/static-db/asks';
+import { hashPassword, verifyPassword } from '../utils/password';
 
 export class Room {
   private MIN_PLAYERS = 2;
@@ -12,9 +13,9 @@ export class Room {
   private codeRoom: string;
   private players: Player[];
   private started: boolean;
-  private password?: string;
+  private passwordHash?: string;
   private game: Game | null;
-  private configGame: Omit<ConfigRoom, 'adminName'>;
+  private configGame: Omit<ConfigRoom, 'adminName' | 'password'>;
   private phaseStartedAt: number | null = null;
   private onPhaseChange?: (room: Room, previousPhase: string) => void;
 
@@ -39,13 +40,12 @@ export class Room {
     this.codeRoom = codeRoom;
     this.players = [];
     this.started = false;
-    this.password = password;
+    this.passwordHash = password ? hashPassword(password) : undefined;
     this.onPhaseChange = onPhaseChange;
     this.configGame = {
       numberOfrounds: 5, // Default to 5 rounds
       maxPlayers: 10,
       codeRoom: codeRoom,
-      password: password,
       roundTime: Number(process.env.ROUND_TIME) || 60,
       playingTime: 60,
       judgingTime: 60,
@@ -166,13 +166,18 @@ export class Room {
   }
 
   updateConfigGame(configGame: Omit<ConfigRoom, 'adminName' | 'codeRoom'>) {
-    const entries = Object.entries(configGame).filter(
+    const { password, ...rest } = configGame as Omit<ConfigRoom, 'adminName' | 'codeRoom'>;
+    const entries = Object.entries(rest).filter(
       ([, value]) => value !== undefined,
     );
     this.configGame = Object.assign(
       this.configGame,
       Object.fromEntries(entries),
     );
+
+    if (password !== undefined) {
+      this.passwordHash = password ? hashPassword(password) : undefined;
+    }
   }
 
   // Helper to shuffle array
@@ -576,7 +581,7 @@ export class Room {
       throw new Error('Game already started');
     }
 
-    if (this.password && this.password !== password) {
+    if (this.passwordHash && (!password || !verifyPassword(password, this.passwordHash))) {
       throw new Error('Invalid password');
     }
 
