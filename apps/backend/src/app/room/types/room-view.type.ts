@@ -32,5 +32,5 @@ export type RoomView = {
   tiebreakActive: boolean;
   phaseStartedAt?: number | null;
   deckCount: number;
-  configGame: Omit<ConfigRoom, 'adminName'>;
+  configGame: Omit<ConfigRoom, 'adminName' | 'password'>;
 };
