@@ -30,9 +30,24 @@ const roomPresenter = new RoomPresenterService();
 // are attributed to the player (not the volatile socket id).
 const socketToPlayer = new Map<string, { roomCode: string; playerId: string }>();
 
-const resolvePlayerId = (socket: any): string => {
-  const mapping = socketToPlayer.get(socket.id);
-  return mapping?.playerId ?? socket.id;
+// Verifies the socket belongs to the room and returns the resolved player id.
+const requireMember = (socket: any, roomCode: string): { room: any; playerId: string } => {
+  const room = roomManager.getRoom(roomCode.trim().toUpperCase());
+  const playerId = socketToPlayer.get(socket.id)?.playerId;
+  if (!playerId || !room.getPlayers().some((p: any) => p.getId() === playerId)) {
+    throw new Error('You are not a member of this room');
+  }
+  return { room, playerId };
+};
+
+// Verifies the socket belongs to the room AND is its admin.
+const requireAdmin = (socket: any, roomCode: string): { room: any; playerId: string } => {
+  const { room, playerId } = requireMember(socket, roomCode);
+  const player = room.getPlayers().find((p: any) => p.getId() === playerId);
+  if (!player?.getIsAdmin()) {
+    throw new Error('Only the room admin can perform this action');
+  }
+  return { room, playerId };
 };
 
 const onRoomStateChange = (room: any, previousPhase: string) => {
@@ -212,6 +227,8 @@ io.on('connection', (socket) => {
   socket.on('configure-room', function (config: any) {
     try {
       const codeRoom = (config.roomCode || config.codeRoom || '').toUpperCase();
+      const { room } = requireAdmin(socket, codeRoom);
+
       const configMapped: ConfigRoom = {
         codeRoom: codeRoom,
         numberOfrounds: config.numberOfrounds ?? 5,
@@ -227,7 +244,6 @@ io.on('connection', (socket) => {
       roomService.configureRoom(configMapped);
       console.log(`Room configured: ${codeRoom}`);
 
-      const room = roomManager.getRoom(codeRoom);
       const roomView = roomPresenter.mapRoom(room);
 
       io.to(codeRoom).emit('roomUpdated', roomView);
@@ -242,14 +258,13 @@ io.on('connection', (socket) => {
   // Player Ready (toggle)
   socket.on('playerReady', (roomCode: string) => {
     try {
-      const roomCodeUpper = roomCode.toUpperCase();
-      const playerId = resolvePlayerId(socket);
+      const { room, playerId } = requireMember(socket, roomCode);
+      const roomCodeUpper = room.getCodeRoom();
       const result = playerRoomService.togglePlayerReady(roomCodeUpper, playerId);
       console.log(
         `Player ${playerId} toggled ready=${result.isReady} in room ${roomCodeUpper}`,
       );
 
-      const room = roomManager.getRoom(roomCodeUpper);
       const roomView = roomPresenter.mapRoom(room);
 
       io.to(roomCodeUpper).emit('playerReadyChanged', playerId, result.isReady);
@@ -264,8 +279,8 @@ io.on('connection', (socket) => {
 
       socket.on('startGame', (roomCode: string) => {
         try {
-          const roomCodeUpper = roomCode.toUpperCase();
-          const room = roomManager.getRoom(roomCodeUpper);
+          const { room } = requireAdmin(socket, roomCode);
+          const roomCodeUpper = room.getCodeRoom();
           room.startGame();
           console.log(`Game started in room: ${roomCodeUpper}`);
     
@@ -285,9 +300,8 @@ io.on('connection', (socket) => {
       // Submit Cards
       socket.on('submitCards', (roomCode: string, cardIds: string[]) => {
         try {
-          const roomCodeUpper = roomCode.toUpperCase();
-          const room = roomManager.getRoom(roomCodeUpper);
-          const playerId = resolvePlayerId(socket);
+          const { room, playerId } = requireMember(socket, roomCode);
+          const roomCodeUpper = room.getCodeRoom();
           room.submitCards(playerId, cardIds);
           console.log(`Player ${playerId} submitted cards in room ${roomCodeUpper}`);
     
@@ -303,9 +317,8 @@ io.on('connection', (socket) => {
       // Vote for a submitted card
       socket.on('selectWinner', (roomCode: string, winnerPlayerId: string) => {
         try {
-          const roomCodeUpper = roomCode.toUpperCase();
-          const room = roomManager.getRoom(roomCodeUpper);
-          const voterPlayerId = resolvePlayerId(socket);
+          const { room, playerId: voterPlayerId } = requireMember(socket, roomCode);
+          const roomCodeUpper = room.getCodeRoom();
           
           const recorded = room.selectWinner(voterPlayerId, winnerPlayerId);
           console.log(`Player ${voterPlayerId} voted for ${winnerPlayerId} in room ${roomCodeUpper}`);
@@ -330,9 +343,8 @@ io.on('connection', (socket) => {
   // Leave Room
   socket.on('leaveRoom', (roomCode: string) => {
     try {
-      const roomCodeUpper = roomCode.toUpperCase();
-      const room = roomManager.getRoom(roomCodeUpper);
-      const playerId = resolvePlayerId(socket);
+      const { room, playerId } = requireMember(socket, roomCode);
+      const roomCodeUpper = room.getCodeRoom();
       const remaining = room.disconnectPlayer(playerId);
       socketToPlayer.delete(socket.id);
       socket.leave(roomCodeUpper);
@@ -355,8 +367,8 @@ io.on('connection', (socket) => {
   // Back to lobby (replay without leaving the room)
   socket.on('backToLobby', (roomCode: string) => {
     try {
-      const roomCodeUpper = roomCode.toUpperCase();
-      const room = roomManager.getRoom(roomCodeUpper);
+      const { room } = requireAdmin(socket, roomCode);
+      const roomCodeUpper = room.getCodeRoom();
       room.resetToLobby();
 
       const roomView = roomPresenter.mapRoom(room);
