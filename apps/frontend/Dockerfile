@@ -1,4 +1,4 @@
-FROM node:26-alpine AS build
+FROM node:24.16.0-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -14,12 +14,18 @@ ENV VITE_SOCKET_URL=${VITE_SOCKET_URL}
 
 RUN npm run build --workspace @horrible-card-game/web
 
-FROM node:26-alpine
+FROM node:24.16.0-alpine
 WORKDIR /app
+ENV NODE_ENV=production
 
-COPY --from=build /app/apps/frontend/dist ./dist
-COPY apps/frontend/serve.mjs ./serve.mjs
+COPY --from=build --chown=node:node /app/apps/frontend/dist ./dist
+COPY --chown=node:node apps/frontend/serve.mjs ./serve.mjs
 
-EXPOSE 80
+USER node
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:8080/').then(() => process.exit(0)).catch(() => process.exit(1))"
 
 CMD ["node", "serve.mjs"]
