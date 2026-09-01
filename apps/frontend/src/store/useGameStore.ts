@@ -13,6 +13,7 @@ export interface RoundRecord {
 interface GameStore {
   room: Room | null;
   player: Player | null;
+  reconnectToken: string | null;
   isConnected: boolean;
   socketStatus: "idle" | "connecting" | "connected" | "disconnected" | "reconnecting";
   socketInitialized: boolean;
@@ -41,6 +42,7 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set) => ({
   room: null,
   player: null,
+  reconnectToken: null,
   isConnected: false,
   socketStatus: "idle",
   socketInitialized: false,
@@ -71,6 +73,7 @@ export const useGameStore = create<GameStore>((set) => ({
     set({
       room: null,
       player: null,
+      reconnectToken: null,
       error: null,
       lobbyMessages: [],
       timerRemaining: null,
