@@ -1,7 +1,7 @@
 {
   "name": "@horrible-card-game/server",
   "version": "1.0.0",
-  "description": "Cards Against Humanity game server (socket.io backend)",
+  "description": "Horrible Card Game game server (socket.io backend)",
   "private": true,
   "license": "ISC",
   "author": "",

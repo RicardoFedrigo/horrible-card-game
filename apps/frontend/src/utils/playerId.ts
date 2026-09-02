@@ -1,4 +1,4 @@
-const PLAYER_ID_KEY = "cah-player-id";
+const PLAYER_ID_KEY = "hcg-player-id";
 
 export const getPlayerId = (): string => {
   let id = sessionStorage.getItem(PLAYER_ID_KEY);

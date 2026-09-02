@@ -99,7 +99,7 @@ export const SubmittedCards = ({
             ) : (
               <Box sx={hiddenCardContainerStyles}>
                 <Paper elevation={4} sx={hiddenCardStyles}>
-                  <Typography sx={hiddenCardTextStyles}>CAH</Typography>
+                  <Typography sx={hiddenCardTextStyles}>HCG</Typography>
                 </Paper>
               </Box>
             )}

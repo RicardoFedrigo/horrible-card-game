@@ -1,6 +1,6 @@
 # Horrible Card Game
 
-Cards Against Humanity clone, organized as a monorepo.
+Horrible Card Game clone, organized as a monorepo.
 
 ## Structure
 

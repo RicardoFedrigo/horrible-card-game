@@ -303,7 +303,7 @@ export const GamePage = () => {
         <Toolbar sx={toolbarStyles}>
           <Box sx={headerLeftStyles}>
             <Typography variant="h6" sx={logoStyles}>
-              CAH
+              HCG
             </Typography>
 
             <Divider orientation="vertical" flexItem sx={dividerStyles} />

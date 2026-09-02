@@ -5,7 +5,7 @@
       "type": "bun",
       "request": "launch",
       "name": "Debug Bun",
-      "program": "/home/ricardo/dev/node/typescript/card-against-humanity/src/server.ts",
+      "program": "/home/ricardo/dev/node/horrible-card-game/apps/backend/src/server.ts",
       "args": [],
       "cwd": "${workspaceFolder}",
       "env": {},
