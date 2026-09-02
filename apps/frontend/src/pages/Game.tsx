@@ -732,8 +732,27 @@ export const GamePage = () => {
                         (s) => s.playerId === id,
                       );
                       return winningSubmission?.cards.map((card) => (
-                        <Box key={card.id} sx={{ maxWidth: 300 }}>
-                          <Card card={card} size="md" />
+                        <Box
+                          key={card.id}
+                          sx={{
+                            maxWidth: 300,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 1.5,
+                          }}
+                        >
+                          <Card card={card} size="md" hideText />
+                          <Typography
+                            variant="h6"
+                            fontWeight={700}
+                            textAlign="center"
+                            sx={{
+                              animation: "answer-wind 0.9s ease both",
+                            }}
+                          >
+                            {card.text}
+                          </Typography>
                         </Box>
                       ));
                     })}
