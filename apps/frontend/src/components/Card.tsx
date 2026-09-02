@@ -19,7 +19,6 @@ interface CardProps {
   isDisabled?: boolean;
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
-  hideText?: boolean;
 }
 
 export const Card = ({ 
@@ -28,7 +27,6 @@ export const Card = ({
   isDisabled = false,
   onClick,
   size = 'md',
-  hideText = false,
 }: CardProps) => {
   const { t } = useTranslation();
   const isBlack = card.cardType === 'black';
@@ -69,7 +67,7 @@ export const Card = ({
       })}
     >
       <Typography variant="body1" sx={cardTextStyles(styles.fontSize)}>
-        {hideText ? '' : card.text}
+        {card.text}
       </Typography>
       
       <Box sx={cardFooterStyles}>

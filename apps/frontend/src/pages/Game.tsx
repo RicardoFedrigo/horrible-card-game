@@ -698,7 +698,7 @@ export const GamePage = () => {
                 </Typography>
               )}
 
-              {/* Black card + winning cards */}
+              {/* Black card + winning answer */}
               {currentBlackCard && (
                 <Box
                   sx={{
@@ -719,44 +719,34 @@ export const GamePage = () => {
                   >
                     {t("game.winningAnswer")}
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                      justifyContent: "center",
-                      flexWrap: "wrap",
-                    }}
+                  <Typography
+                    variant="h4"
+                    fontWeight={700}
+                    textAlign="center"
+                    sx={questionTextStyles}
                   >
-                    {winnerIds.map((id) => {
-                      const winningSubmission = submissions.find(
-                        (s) => s.playerId === id,
-                      );
-                      return winningSubmission?.cards.map((card) => (
-                        <Box
-                          key={card.id}
-                          sx={{
-                            maxWidth: 300,
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 1.5,
-                          }}
-                        >
-                          <Card card={card} size="md" hideText />
-                          <Typography
-                            variant="h6"
-                            fontWeight={700}
-                            textAlign="center"
-                            sx={{
-                              animation: "answer-wind 0.9s ease both",
-                            }}
-                          >
-                            {card.text}
-                          </Typography>
-                        </Box>
-                      ));
-                    })}
-                  </Box>
+                    {currentBlackCard.text}
+                  </Typography>
+                  {winnerIds.map((id) => {
+                    const winningSubmission = submissions.find(
+                      (s) => s.playerId === id,
+                    );
+                    return winningSubmission?.cards.map((card) => (
+                      <Typography
+                        key={card.id}
+                        variant="h5"
+                        fontWeight={700}
+                        textAlign="center"
+                        color="success.main"
+                        sx={{
+                          maxWidth: 720,
+                          animation: "answer-wind 0.9s ease both",
+                        }}
+                      >
+                        {card.text}
+                      </Typography>
+                    ));
+                  })}
                 </Box>
               )}
 
