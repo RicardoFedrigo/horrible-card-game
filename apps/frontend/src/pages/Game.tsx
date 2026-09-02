@@ -734,36 +734,6 @@ export const GamePage = () => {
                   {t("game.tie")}
                 </Typography>
               )}
-
-              {timerRemaining !== null && (
-                <Box
-                  sx={{
-                    mt: 3,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    justifyContent: "center",
-                  }}
-                >
-                  <TimerIcon
-                    sx={{
-                      color:
-                        timerRemaining <= 10 ? "error.main" : "primary.main",
-                      fontSize: 28,
-                    }}
-                  />
-                  <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    sx={{
-                      color:
-                        timerRemaining <= 10 ? "error.main" : "inherit",
-                    }}
-                  >
-                    {t("game.nextRound", { count: timerRemaining })}
-                  </Typography>
-                </Box>
-              )}
               <Typography variant="body1" color="text.secondary">
                 {t("game.nextRoundSoon")}
               </Typography>
