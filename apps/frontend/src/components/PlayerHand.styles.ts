@@ -15,6 +15,7 @@ export const cardsContainerStyles: SxProps<Theme> = {
     display: 'flex',
     gap: 2,
     overflowX: 'auto',
+    justifyContent: 'center',
     pb: 2,
     px: 1,
     mx: -1,

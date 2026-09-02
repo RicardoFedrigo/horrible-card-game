@@ -80,15 +80,21 @@ export const mainContentStyles: SxProps<Theme> = {
   flexDirection: { xs: 'column', lg: 'row' },
 };
 
-export const sidebarStyles: SxProps<Theme> = {
-  width: { xs: '100%', lg: 288 },
+export const getSidebarStyles = (open: boolean): SxProps<Theme> => ({
+  width: { xs: '100%', lg: open ? 288 : 48 },
   bgcolor: 'rgba(22, 32, 25, 0.6)',
   borderRight: { lg: '1px solid rgba(230, 224, 200, 0.12)' },
   borderBottom: { xs: '1px solid rgba(230, 224, 200, 0.12)', lg: 'none' },
-  p: 2,
+  p: open ? 2 : 1,
   display: 'flex',
   flexDirection: 'column',
   gap: 2,
+  transition: 'width 0.25s ease',
+});
+
+export const sidebarToggleStyles: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: { xs: 'flex-end', lg: 'flex-start' },
 };
 
 export const phasePaperStyles: SxProps<Theme> = {
@@ -208,8 +214,9 @@ export const questionContainerStyles: SxProps<Theme> = {
 };
 
 export const questionTextStyles: SxProps<Theme> = {
-  maxWidth: 720,
+  maxWidth: 760,
   lineHeight: 1.3,
+  fontSize: { xs: '1.75rem', md: '2.25rem' },
 };
 
 export const submissionsSectionStyles: SxProps<Theme> = {

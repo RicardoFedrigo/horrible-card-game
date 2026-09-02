@@ -30,9 +30,41 @@ const roomPresenter = new RoomPresenterService();
 // are attributed to the player (not the volatile socket id).
 const socketToPlayer = new Map<string, { roomCode: string; playerId: string }>();
 
+// Grace period (ms) a disconnected socket has to reconnect before the player is
+// removed from the room. Covers page refreshes/hot reloads without keeping
+// players who actually closed the browser stuck in the room.
+const DISCONNECT_GRACE_MS = 15000;
+
+// Tracks players whose socket disconnected but still have a grace period to
+// reconnect. Keyed by playerId so the "rejoin" event can cancel the removal.
+const pendingDisconnects = new Map<
+  string,
+  { timer: NodeJS.Timeout; roomCode: string; playerId: string }
+>();
+
 const resolvePlayerId = (socket: any): string => {
   const mapping = socketToPlayer.get(socket.id);
   return mapping?.playerId ?? socket.id;
+};
+
+const removePlayerFromRoom = (roomCode: string, playerId: string) => {
+  try {
+    const room = roomManager.getRoom(roomCode);
+    const remaining = room.disconnectPlayer(playerId);
+    console.log(`Player ${playerId} removed from room ${roomCode} (disconnect)`);
+
+    if (remaining === 0) {
+      roomManager.remove(roomCode);
+      return;
+    }
+
+    io.to(roomCode).emit('playerLeft', playerId);
+
+    const roomView = roomPresenter.mapRoom(room);
+    io.to(roomCode).emit('roomUpdated', roomView);
+  } catch (error) {
+    // Room may have already been removed; nothing else to clean up.
+  }
 };
 
 const onRoomStateChange = (room: any, previousPhase: string) => {
@@ -175,6 +207,14 @@ io.on('connection', (socket) => {
 
       socketToPlayer.set(socket.id, { roomCode: roomCodeUpper, playerId });
       socket.join(roomCodeUpper);
+
+      // Cancel any pending removal triggered by a transient disconnect.
+      const pending = pendingDisconnects.get(playerId);
+      if (pending) {
+        clearTimeout(pending.timer);
+        pendingDisconnects.delete(playerId);
+        console.log(`Player ${playerId} rejoined before disconnect grace expired`);
+      }
 
       const roomView = roomPresenter.mapRoom(room);
       socket.emit('room', { room: roomView, playerId });
@@ -377,10 +417,27 @@ io.on('connection', (socket) => {
   // Disconnect
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
-    // Keep the player in the room so a transient disconnect (page refresh,
-    // hot reload) can reconnect via the "rejoin" event without losing their
-    // seat. Only the socket -> player mapping is cleaned up here.
+
+    const mapping = socketToPlayer.get(socket.id);
     socketToPlayer.delete(socket.id);
+
+    // No room association means there is nothing to clean up.
+    if (!mapping) {
+      return;
+    }
+
+    const { roomCode, playerId } = mapping;
+
+    // Give the client a short grace period to reconnect (page refresh, hot
+    // reload). If it does not come back in time, the player is removed from
+    // the room and, when only one player is left, the game is ended via
+    // Room.disconnectPlayer.
+    const timer = setTimeout(() => {
+      pendingDisconnects.delete(playerId);
+      removePlayerFromRoom(roomCode, playerId);
+    }, DISCONNECT_GRACE_MS);
+
+    pendingDisconnects.set(playerId, { timer, roomCode, playerId });
   });
 });
 

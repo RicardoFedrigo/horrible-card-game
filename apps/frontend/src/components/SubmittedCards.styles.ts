@@ -7,16 +7,18 @@ export const emptyStateStyles: SxProps<Theme> = {
 
 export const titleStyles: SxProps<Theme> = {
   mb: 2,
+  textAlign: 'center',
 };
 
 export const gridStyles: SxProps<Theme> = {
   display: 'grid',
   gridTemplateColumns: {
-    xs: '1fr',
-    sm: 'repeat(2, 1fr)',
-    md: 'repeat(3, 1fr)',
+    xs: 'repeat(auto-fit, minmax(140px, 1fr))',
+    sm: 'repeat(auto-fit, minmax(160px, 180px))',
+    md: 'repeat(auto-fit, minmax(160px, 180px))',
   },
   gap: 2,
+  justifyContent: 'center',
 };
 
 interface SubmissionCardStylesParams {

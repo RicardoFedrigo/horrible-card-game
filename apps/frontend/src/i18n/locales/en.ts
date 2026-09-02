@@ -32,6 +32,7 @@ export const en = {
     waitForReady: "Wait for all players to be ready",
     copy: "Copy",
     copied: "Copied!",
+    copyError: "Could not copy room code",
     ready: "Ready Up",
     readyDone: "✓ Ready",
     startGame: "Start Game",

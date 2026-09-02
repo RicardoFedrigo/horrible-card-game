@@ -26,7 +26,7 @@ export const Card = ({
   isSelected = false, 
   isDisabled = false,
   onClick,
-  size = 'md'
+  size = 'md',
 }: CardProps) => {
   const { t } = useTranslation();
   const isBlack = card.cardType === 'black';

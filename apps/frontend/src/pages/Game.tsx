@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,11 +13,16 @@ import {
   Fade,
   Grow,
   Collapse,
+  IconButton,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import LogoutIcon from "@mui/icons-material/Logout";
 import TimerIcon from "@mui/icons-material/Timer";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGlobe } from "@fortawesome/free-solid-svg-icons";
 import { useSocket } from "../hooks/useSocket";
@@ -46,7 +51,8 @@ import {
   connectionTextStyles,
   alertStyles,
   mainContentStyles,
-  sidebarStyles,
+  getSidebarStyles,
+  sidebarToggleStyles,
   gameAreaStyles,
   waitingContainerStyles,
   waitingHeaderStyles,
@@ -58,9 +64,6 @@ import {
   roomCodeLabelStyles,
   roomCodeValueStyles,
   playingContainerStyles,
-  deckPileRowStyles,
-  deckSectionStyles,
-  deckSectionLabelStyles,
   questionContainerStyles,
   questionTextStyles,
   submissionsSectionStyles,
@@ -98,11 +101,17 @@ export const GamePage = () => {
   const roundHistory = useGameStore((state) => state.roundHistory);
   const setError = useGameStore((state) => state.setError);
   const winnerMessage = useGameStore((state) => state.winnerMessage);
+  const roomPassword = useGameStore((state) => state.roomPassword);
 
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  const [sidebarOpen, setSidebarOpen] = useState(!isSmallScreen);
+  const prevPhaseRef = useRef<string | undefined>(undefined);
 
   const roomCode = room?.codeRoom ?? code;
 
@@ -122,6 +131,15 @@ export const GamePage = () => {
   const votes = room?.votes ?? [];
   const tiebreakActive = room?.tiebreakActive ?? false;
 
+  // Collapse sidebar when the game starts (leaves waiting phase)
+  useEffect(() => {
+    const previousPhase = prevPhaseRef.current;
+    if (previousPhase === "waiting" && gamePhase !== "waiting") {
+      setSidebarOpen(false);
+    }
+    prevPhaseRef.current = gamePhase;
+  }, [gamePhase]);
+
   // Auto-dismiss errors
   useEffect(() => {
     if (!error) return;
@@ -133,7 +151,6 @@ export const GamePage = () => {
     players.length > 0 && players.every((p) => p.status === "ready");
   const maxSelections = currentBlackCard?.pick ?? 1;
   const playerHand = currentPlayer?.cardsInHand ?? [];
-  const deckCount = room?.deckCount ?? 50;
 
   const hasVoted = votes.some((v) => v.voterPlayerId === currentPlayerId);
 
@@ -207,14 +224,40 @@ export const GamePage = () => {
     backToLobby();
   };
 
-  const handleCopyCode = async () => {
-    if (!roomCode) return;
+  const copyToClipboard = (text: string): boolean => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {
+        setError(t("game.copyError"));
+      });
+      return true;
+    }
+
     try {
-      await navigator.clipboard.writeText(roomCode);
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (!successful) {
+        setError(t("game.copyError"));
+        return false;
+      }
+      return true;
+    } catch {
+      setError(t("game.copyError"));
+      return false;
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (!roomCode) return;
+    if (copyToClipboard(roomCode)) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError("Could not copy room code");
     }
   };
 
@@ -271,6 +314,15 @@ export const GamePage = () => {
                 {code}
               </Box>
             </Typography>
+
+            {roomPassword && (
+              <Typography variant="body2" color="text.secondary">
+                {t("home.password")}:{" "}
+                <Box component="span" sx={roomCodeStyles}>
+                  {roomPassword}
+                </Box>
+              </Typography>
+            )}
           </Box>
 
           <Box sx={headerPhaseStyles}>
@@ -332,20 +384,42 @@ export const GamePage = () => {
       {/* Main content */}
       <Box sx={mainContentStyles}>
         {/* Sidebar - Players */}
-        <Box sx={sidebarStyles}>
-          <PlayerList
-            players={players}
-            currentPlayerId={currentPlayerId}
-            cardCzarId={cardCzarId}
-          />
+        <Box sx={getSidebarStyles(sidebarOpen)}>
+          <Box sx={sidebarToggleStyles}>
+            <IconButton
+              size="small"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              aria-label={
+                sidebarOpen ? t("config.collapse") : t("config.expand")
+              }
+            >
+              {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          </Box>
 
-          {isAdmin && (
-            <RoomConfig
-              room={room}
-              isAdmin={isAdmin}
-              onConfigChange={configureRoom}
-            />
-          )}
+          <Collapse in={sidebarOpen} timeout="auto">
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <PlayerList
+                players={players}
+                currentPlayerId={currentPlayerId}
+                cardCzarId={cardCzarId}
+              />
+
+              {isAdmin && (
+                <RoomConfig
+                  room={room}
+                  isAdmin={isAdmin}
+                  onConfigChange={configureRoom}
+                />
+              )}
+            </Box>
+          </Collapse>
         </Box>
 
         {/* Game area */}
@@ -513,28 +587,76 @@ export const GamePage = () => {
                       </Box>
                     )}
 
-                    <Box sx={deckPileRowStyles}>
-                      <Box sx={deckSectionStyles}>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          sx={deckSectionLabelStyles}
-                        >
-                          {t("game.deck")}
+                    {/* Question + Answer (stacked on results) */}
+                    <Box
+                      sx={{
+                        ...questionContainerStyles,
+                        gap: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textAlign: "center",
+                          width: "100%",
+                        }}
+                      >
+                        <Typography variant="h3" fontWeight={700} sx={questionTextStyles}>
+                          {currentBlackCard.text}
                         </Typography>
-                        <CardDeck type="black" count={deckCount} />
+                        {maxSelections > 1 && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {t("game.pickCards", { count: maxSelections })}
+                          </Typography>
+                        )}
                       </Box>
-                    </Box>
 
-                    {/* Question - centered plain text */}
-                    <Box sx={questionContainerStyles}>
-                      <Typography variant="h4" fontWeight={700} sx={questionTextStyles}>
-                        {currentBlackCard.text}
-                      </Typography>
-                      {maxSelections > 1 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          {t("game.pickCards", { count: maxSelections })}
-                        </Typography>
+                      {gamePhase === "results" && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                            sx={{
+                              textTransform: "uppercase",
+                              letterSpacing: "0.08em",
+                            }}
+                          >
+                            {t("game.winningAnswer")}
+                          </Typography>
+                          {winnerIds.map((id) => {
+                            const winningSubmission = submissions.find(
+                              (s) => s.playerId === id,
+                            );
+                            return winningSubmission?.cards.map((card) => (
+                              <Typography
+                                key={card.id}
+                                variant="h3"
+                                fontWeight={700}
+                                textAlign="center"
+                                color="success.main"
+                                sx={{
+                                  mt: 1,
+                                  maxWidth: 720,
+                                  animation: "answer-wind 0.9s ease both",
+                                }}
+                              >
+                                {card.text}
+                              </Typography>
+                            ));
+                          })}
+                        </Box>
                       )}
                     </Box>
 
@@ -634,13 +756,13 @@ export const GamePage = () => {
           {gamePhase === "results" && (
             <Grow in timeout={750}>
               <Box sx={resultsContainerStyles}>
-              <Typography variant="h3" fontWeight={700} gutterBottom>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 {winnerIds.length > 1
                   ? t("game.roundWinners")
                   : t("game.roundWinner")}
               </Typography>
               <Typography
-                variant="h5"
+                variant="subtitle2"
                 color="success.main"
                 sx={winnerNameStyles}
               >
@@ -654,87 +776,14 @@ export const GamePage = () => {
               </Typography>
               {winnerIds.length > 1 && (
                 <Typography
-                  variant="body1"
+                  variant="caption"
                   color="text.secondary"
                   sx={{ mt: 1 }}
                 >
                   {t("game.tie")}
                 </Typography>
               )}
-
-              {/* Black card + winning cards */}
-              {currentBlackCard && (
-                <Box
-                  sx={{
-                    mt: 3,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 2,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    sx={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {t("game.winningAnswer")}
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                      justifyContent: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {winnerIds.map((id) => {
-                      const winningSubmission = submissions.find(
-                        (s) => s.playerId === id,
-                      );
-                      return winningSubmission?.cards.map((card) => (
-                        <Box key={card.id} sx={{ maxWidth: 300 }}>
-                          <Card card={card} size="md" />
-                        </Box>
-                      ));
-                    })}
-                  </Box>
-                </Box>
-              )}
-
-              {timerRemaining !== null && (
-                <Box
-                  sx={{
-                    mt: 3,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    justifyContent: "center",
-                  }}
-                >
-                  <TimerIcon
-                    sx={{
-                      color:
-                        timerRemaining <= 10 ? "error.main" : "primary.main",
-                      fontSize: 28,
-                    }}
-                  />
-                  <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    sx={{
-                      color:
-                        timerRemaining <= 10 ? "error.main" : "inherit",
-                    }}
-                  >
-                    {t("game.nextRound", { count: timerRemaining })}
-                  </Typography>
-                </Box>
-              )}
-              <Typography variant="body1" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 {t("game.nextRoundSoon")}
               </Typography>
               </Box>

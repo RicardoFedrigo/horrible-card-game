@@ -60,6 +60,10 @@ export const cardTextStyles = (fontSize: string): SxProps<Theme> => ({
   fontWeight: 700,
   lineHeight: 1.3,
   flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
 });
 
 export const cardFooterStyles: SxProps<Theme> = {
