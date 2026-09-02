@@ -1,6 +1,6 @@
 # Events and Routes Documentation
 
-This document describes the Socket.IO events and HTTP routes in the Cards Against Humanity game server.
+This document describes the Socket.IO events and HTTP routes in the Horrible Card Game game server.
 
 ## Table of Contents
 

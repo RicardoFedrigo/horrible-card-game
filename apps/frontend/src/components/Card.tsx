@@ -72,7 +72,7 @@ export const Card = ({
       
       <Box sx={cardFooterStyles}>
         <Typography variant="caption" sx={cardLogoStyles}>
-          CAH
+          HCG
         </Typography>
         {isBlack && card.pick && card.pick > 1 && (
           <Chip

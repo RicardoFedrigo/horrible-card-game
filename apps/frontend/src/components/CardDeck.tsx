@@ -34,10 +34,10 @@ export const CardDeck = ({ type, count = 50 }: CardDeckProps) => {
         />
       ))}
       
-      {/* Top card with CAH logo */}
+      {/* Top card with HCG logo */}
       <Paper elevation={4} sx={getTopCardStyles(isBlack)}>
         <Typography variant="h4" sx={deckLogoStyles}>
-          CAH
+          HCG
         </Typography>
         <Typography variant="caption" sx={deckLabelStyles}>
           {isBlack ? t('deck.questions') : t('deck.answers')}

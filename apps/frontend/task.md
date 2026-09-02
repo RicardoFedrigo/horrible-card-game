@@ -35,7 +35,7 @@ Follow these rules when you write code:
 - Implement accessibility features on elements. For example, a tag should have a tabindex=“0”, aria-label, on:click, and on:keydown, and similar attributes.
 - Use consts instead of functions, for example, “const toggle = () =>”. Also, define a type if possible.
 
-This project is based on the Card Against Humanity game.
+This project is based on the Horrible Card Game game.
 Create a route for home and a route for the game.
 The home route should have a button to start the game.
 The game route should have a game board with a deck of cards and a pile of cards.
