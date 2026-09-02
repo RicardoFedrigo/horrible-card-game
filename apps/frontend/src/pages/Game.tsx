@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,11 +13,16 @@ import {
   Fade,
   Grow,
   Collapse,
+  IconButton,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import LogoutIcon from "@mui/icons-material/Logout";
 import TimerIcon from "@mui/icons-material/Timer";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGlobe } from "@fortawesome/free-solid-svg-icons";
 import { useSocket } from "../hooks/useSocket";
@@ -46,7 +51,8 @@ import {
   connectionTextStyles,
   alertStyles,
   mainContentStyles,
-  sidebarStyles,
+  getSidebarStyles,
+  sidebarToggleStyles,
   gameAreaStyles,
   waitingContainerStyles,
   waitingHeaderStyles,
@@ -102,6 +108,11 @@ export const GamePage = () => {
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  const [sidebarOpen, setSidebarOpen] = useState(!isSmallScreen);
+  const prevPhaseRef = useRef<string | undefined>(undefined);
+
   const roomCode = room?.codeRoom ?? code;
 
   const currentPlayer = useMemo(() => {
@@ -119,6 +130,15 @@ export const GamePage = () => {
   const cardCzarId = room?.cardCzarId ?? null;
   const votes = room?.votes ?? [];
   const tiebreakActive = room?.tiebreakActive ?? false;
+
+  // Collapse sidebar when the game starts (leaves waiting phase)
+  useEffect(() => {
+    const previousPhase = prevPhaseRef.current;
+    if (previousPhase === "waiting" && gamePhase !== "waiting") {
+      setSidebarOpen(false);
+    }
+    prevPhaseRef.current = gamePhase;
+  }, [gamePhase]);
 
   // Auto-dismiss errors
   useEffect(() => {
@@ -364,20 +384,42 @@ export const GamePage = () => {
       {/* Main content */}
       <Box sx={mainContentStyles}>
         {/* Sidebar - Players */}
-        <Box sx={sidebarStyles}>
-          <PlayerList
-            players={players}
-            currentPlayerId={currentPlayerId}
-            cardCzarId={cardCzarId}
-          />
+        <Box sx={getSidebarStyles(sidebarOpen)}>
+          <Box sx={sidebarToggleStyles}>
+            <IconButton
+              size="small"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              aria-label={
+                sidebarOpen ? t("config.collapse") : t("config.expand")
+              }
+            >
+              {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          </Box>
 
-          {isAdmin && (
-            <RoomConfig
-              room={room}
-              isAdmin={isAdmin}
-              onConfigChange={configureRoom}
-            />
-          )}
+          <Collapse in={sidebarOpen} timeout="auto">
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <PlayerList
+                players={players}
+                currentPlayerId={currentPlayerId}
+                cardCzarId={cardCzarId}
+              />
+
+              {isAdmin && (
+                <RoomConfig
+                  room={room}
+                  isAdmin={isAdmin}
+                  onConfigChange={configureRoom}
+                />
+              )}
+            </Box>
+          </Collapse>
         </Box>
 
         {/* Game area */}
