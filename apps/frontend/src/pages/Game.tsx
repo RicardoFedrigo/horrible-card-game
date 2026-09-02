@@ -676,7 +676,7 @@ export const GamePage = () => {
                   : t("game.roundWinner")}
               </Typography>
               <Typography
-                variant="h5"
+                variant="h6"
                 color="success.main"
                 sx={winnerNameStyles}
               >
@@ -718,14 +718,6 @@ export const GamePage = () => {
                     }}
                   >
                     {t("game.winningAnswer")}
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    fontWeight={700}
-                    textAlign="center"
-                    sx={questionTextStyles}
-                  >
-                    {currentBlackCard.text}
                   </Typography>
                   {winnerIds.map((id) => {
                     const winningSubmission = submissions.find(
