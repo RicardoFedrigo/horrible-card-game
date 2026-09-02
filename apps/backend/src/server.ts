@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import { randomUUID } from 'node:crypto';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { ConfigRoom } from './app/room/types/config-room.types';
@@ -12,15 +13,41 @@ import { WinnerMessages } from './db/static-db/winner-messages';
 
 const app = express();
 
-app.use(cors());
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOrigin = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : '*';
+
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: corsOrigin,
   },
+});
+
+// Basic connection rate limiting to blunt socket flooding / memory exhaustion.
+const CONNECTION_WINDOW_MS = 60_000;
+const MAX_CONNECTIONS_PER_WINDOW = 60;
+const connectionsByIp = new Map<string, number[]>();
+
+io.use((socket, next) => {
+  const ip = socket.handshake.address || 'unknown';
+  const now = Date.now();
+  const recent = (connectionsByIp.get(ip) ?? []).filter(
+    (t) => now - t < CONNECTION_WINDOW_MS,
+  );
+  if (recent.length >= MAX_CONNECTIONS_PER_WINDOW) {
+    return next(new Error('Too many connections'));
+  }
+  recent.push(now);
+  connectionsByIp.set(ip, recent);
+  next();
 });
 
 const roomManager = new RoomManager();
@@ -121,23 +148,29 @@ io.on('connection', (socket) => {
   // Create Room
   socket.on('create-room', function (config: ConfigRoom) {
     try {
-      const playerId = config.playerId ?? socket.id;
+      const playerId = randomUUID();
       const roomCreated = roomService.createRoom(config, playerId, onRoomStateChange);
       const roomCodeUpper = config.codeRoom.toUpperCase();
       socketToPlayer.set(socket.id, { roomCode: roomCodeUpper, playerId });
       console.log(`Room created: ${config.codeRoom} by ${playerId}`);
 
       socket.join(roomCodeUpper);
+
+      const room = roomManager.getRoom(roomCodeUpper);
+      const player = room.getPlayers().find((p: any) => p.getId() === playerId);
+      const reconnectToken = player?.getReconnectToken();
       
       // Emit room-created with the expected { room, playerId } structure
       socket.emit('room-created', {
         room: roomCreated.room,
-        playerId: roomCreated.playerId,
+        playerId,
+        reconnectToken,
       });
       // Also emit standard room sync
       socket.emit('room', {
         room: roomCreated.room,
-        playerId: roomCreated.playerId,
+        playerId,
+        reconnectToken,
       });
     } catch (error) {
       console.error(`Error creating room:`, error);
@@ -150,7 +183,7 @@ io.on('connection', (socket) => {
   // Join Room
   socket.on('join-room', (joinRoom: JoinRoom) => {
     try {
-      const playerId = joinRoom.playerId ?? socket.id;
+      const playerId = randomUUID();
       const roomJoined = roomService.joinRoom(joinRoom, playerId);
       console.log(`Player ${joinRoom.name} joined room: ${joinRoom.codeRoom}`);
 
@@ -160,15 +193,19 @@ io.on('connection', (socket) => {
 
       const room = roomManager.getRoom(joinRoom.codeRoom);
       const roomView = roomPresenter.mapRoom(room);
+      const player = room.getPlayers().find((p: any) => p.getId() === playerId);
+      const reconnectToken = player?.getReconnectToken();
 
       // Emit room joining sync back to the joining socket
       socket.emit('room', {
         room: roomView,
         playerId,
+        reconnectToken,
       });
       socket.emit('roomJoined', {
         room: roomView,
         playerId,
+        reconnectToken,
       });
 
       // Broadcast the complete updated room view to all players in the room
@@ -187,20 +224,21 @@ io.on('connection', (socket) => {
   });
 
   // Reconnect: re-associate a new socket connection with an existing player.
-  socket.on('rejoin', (payload: { roomCode: string; playerId: string }) => {
+  socket.on('rejoin', (payload: { roomCode: string; playerId: string; reconnectToken?: string }) => {
     try {
       const roomCodeUpper = (payload?.roomCode || '').toUpperCase();
       const playerId = payload?.playerId;
+      const reconnectToken = payload?.reconnectToken;
       if (!roomCodeUpper || !playerId) {
         return;
       }
 
       const room = roomManager.getRoom(roomCodeUpper);
-      const exists = room
+      const player = room
         .getPlayers()
-        .some((p: any) => p.getId() === playerId);
+        .find((p: any) => p.getId() === playerId);
 
-      if (!exists) {
+      if (!player || !reconnectToken || player.getReconnectToken() !== reconnectToken) {
         socket.emit('error', { message: 'Player not found in room' });
         return;
       }
@@ -217,7 +255,7 @@ io.on('connection', (socket) => {
       }
 
       const roomView = roomPresenter.mapRoom(room);
-      socket.emit('room', { room: roomView, playerId });
+      socket.emit('room', { room: roomView, playerId, reconnectToken });
     } catch (error) {
       console.error(`Error rejoining room:`, error);
     }
@@ -444,6 +482,19 @@ io.on('connection', (socket) => {
 server.listen(3000, () => {
   console.log('Server running on 3000');
 });
+
+// Periodically drop stale connection-rate timestamps to bound memory usage.
+setInterval(() => {
+  const cutoff = Date.now() - CONNECTION_WINDOW_MS;
+  for (const [ip, timestamps] of connectionsByIp.entries()) {
+    const recent = timestamps.filter((t) => t >= cutoff);
+    if (recent.length === 0) {
+      connectionsByIp.delete(ip);
+    } else {
+      connectionsByIp.set(ip, recent);
+    }
+  }
+}, CONNECTION_WINDOW_MS);
 
 // Broadcast timer ticks to all active rooms
 setInterval(() => {

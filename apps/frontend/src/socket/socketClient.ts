@@ -38,11 +38,16 @@ const attachSocketListeners = (socketInstance: Socket) => {
   socketListenersAttached = true;
 
   const setState = useGameStore.setState;
-  const setRoomAndPlayer = (room: Room, playerId?: string) => {
+  const setRoomAndPlayer = (
+    room: Room,
+    playerId?: string,
+    reconnectToken?: string,
+  ) => {
     const currentPlayerId = playerId ?? getPlayerId();
     setState({
       room,
       player: room.players.find((p) => p.id === currentPlayerId) ?? null,
+      reconnectToken: reconnectToken ?? useGameStore.getState().reconnectToken,
       error: null,
     });
   };
@@ -50,11 +55,12 @@ const attachSocketListeners = (socketInstance: Socket) => {
   socketInstance.on("connect", () => {
     setState({ isConnected: true, socketStatus: "connected", error: null });
 
-    const { room, player } = useGameStore.getState();
-    if (room?.codeRoom && player?.id) {
+    const { room, player, reconnectToken } = useGameStore.getState();
+    if (room?.codeRoom && player?.id && reconnectToken) {
       socketInstance.emit("rejoin", {
         roomCode: room.codeRoom,
         playerId: player.id,
+        reconnectToken,
       });
     }
   });
@@ -80,11 +86,11 @@ const attachSocketListeners = (socketInstance: Socket) => {
     "room",
     (
       payload:
-        | { room: Room; playerId: string }
+        | { room: Room; playerId: string; reconnectToken?: string }
         | RoomActivityPayload,
     ) => {
       if ("room" in payload && "playerId" in payload) {
-        setRoomAndPlayer(payload.room, payload.playerId);
+        setRoomAndPlayer(payload.room, payload.playerId, payload.reconnectToken);
         return;
       }
 
@@ -102,13 +108,23 @@ const attachSocketListeners = (socketInstance: Socket) => {
     },
   );
 
-  socketInstance.on("room-created", (roomCreated: { room: Room }) => {
-    setRoomAndPlayer(roomCreated.room, roomCreated.room.players[0]?.id);
-  });
+  socketInstance.on(
+    "room-created",
+    (roomCreated: { room: Room; playerId?: string; reconnectToken?: string }) => {
+      setRoomAndPlayer(
+        roomCreated.room,
+        roomCreated.playerId ?? roomCreated.room.players[0]?.id,
+        roomCreated.reconnectToken,
+      );
+    },
+  );
 
-  socketInstance.on("roomJoined", (payload: { room: Room; playerId?: string }) => {
-    setRoomAndPlayer(payload.room, payload.playerId);
-  });
+  socketInstance.on(
+    "roomJoined",
+    (payload: { room: Room; playerId?: string; reconnectToken?: string }) => {
+      setRoomAndPlayer(payload.room, payload.playerId, payload.reconnectToken);
+    },
+  );
 
   socketInstance.on("roomUpdated", (updatedRoom: Room) => {
     setState((prev) => {
