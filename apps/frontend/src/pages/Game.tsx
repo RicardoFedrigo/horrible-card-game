@@ -690,13 +690,13 @@ export const GamePage = () => {
           {gamePhase === "results" && (
             <Grow in timeout={750}>
               <Box sx={resultsContainerStyles}>
-              <Typography variant="h3" fontWeight={700} gutterBottom>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 {winnerIds.length > 1
                   ? t("game.roundWinners")
                   : t("game.roundWinner")}
               </Typography>
               <Typography
-                variant="h6"
+                variant="subtitle2"
                 color="success.main"
                 sx={winnerNameStyles}
               >
@@ -710,14 +710,14 @@ export const GamePage = () => {
               </Typography>
               {winnerIds.length > 1 && (
                 <Typography
-                  variant="body1"
+                  variant="caption"
                   color="text.secondary"
                   sx={{ mt: 1 }}
                 >
                   {t("game.tie")}
                 </Typography>
               )}
-              <Typography variant="body1" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 {t("game.nextRoundSoon")}
               </Typography>
               </Box>

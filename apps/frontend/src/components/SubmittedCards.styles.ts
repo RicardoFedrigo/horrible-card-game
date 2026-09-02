@@ -7,6 +7,7 @@ export const emptyStateStyles: SxProps<Theme> = {
 
 export const titleStyles: SxProps<Theme> = {
   mb: 2,
+  textAlign: 'center',
 };
 
 export const gridStyles: SxProps<Theme> = {
