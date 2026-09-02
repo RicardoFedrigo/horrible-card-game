@@ -545,17 +545,15 @@ export const GamePage = () => {
                       </Box>
                     )}
 
-                    {/* Question + Answer (50/50 split on results) */}
+                    {/* Question + Answer (stacked on results) */}
                     <Box
                       sx={{
                         ...questionContainerStyles,
-                        flexDirection: { xs: "column", md: "row" },
-                        gap: { xs: 2, md: 0 },
+                        gap: 2,
                       }}
                     >
                       <Box
                         sx={{
-                          flex: { md: 1 },
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
@@ -577,7 +575,6 @@ export const GamePage = () => {
                       {gamePhase === "results" && (
                         <Box
                           sx={{
-                            flex: { md: 1 },
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
