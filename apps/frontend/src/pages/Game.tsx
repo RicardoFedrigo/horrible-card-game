@@ -545,24 +545,51 @@ export const GamePage = () => {
                       </Box>
                     )}
 
-                    {/* Question - centered plain text */}
-                    <Box sx={questionContainerStyles}>
-                      <Typography variant="h4" fontWeight={700} sx={questionTextStyles}>
-                        {currentBlackCard.text}
-                      </Typography>
-                      {maxSelections > 1 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          {t("game.pickCards", { count: maxSelections })}
+                    {/* Question + Answer (50/50 split on results) */}
+                    <Box
+                      sx={{
+                        ...questionContainerStyles,
+                        flexDirection: { xs: "column", md: "row" },
+                        gap: { xs: 2, md: 0 },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          flex: { md: 1 },
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textAlign: "center",
+                          width: "100%",
+                        }}
+                      >
+                        <Typography variant="h3" fontWeight={700} sx={questionTextStyles}>
+                          {currentBlackCard.text}
                         </Typography>
-                      )}
+                        {maxSelections > 1 && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {t("game.pickCards", { count: maxSelections })}
+                          </Typography>
+                        )}
+                      </Box>
 
                       {gamePhase === "results" && (
-                        <>
+                        <Box
+                          sx={{
+                            flex: { md: 1 },
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
                           <Typography
                             variant="subtitle2"
                             color="text.secondary"
                             sx={{
-                              mt: 2,
                               textTransform: "uppercase",
                               letterSpacing: "0.08em",
                             }}
@@ -576,7 +603,7 @@ export const GamePage = () => {
                             return winningSubmission?.cards.map((card) => (
                               <Typography
                                 key={card.id}
-                                variant="h5"
+                                variant="h3"
                                 fontWeight={700}
                                 textAlign="center"
                                 color="success.main"
@@ -590,7 +617,7 @@ export const GamePage = () => {
                               </Typography>
                             ));
                           })}
-                        </>
+                        </Box>
                       )}
                     </Box>
 

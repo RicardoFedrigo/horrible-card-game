@@ -208,8 +208,9 @@ export const questionContainerStyles: SxProps<Theme> = {
 };
 
 export const questionTextStyles: SxProps<Theme> = {
-  maxWidth: 720,
+  maxWidth: 760,
   lineHeight: 1.3,
+  fontSize: { xs: '1.75rem', md: '2.25rem' },
 };
 
 export const submissionsSectionStyles: SxProps<Theme> = {
