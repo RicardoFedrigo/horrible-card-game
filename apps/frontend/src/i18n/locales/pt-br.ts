@@ -32,6 +32,7 @@ export const ptBr = {
     waitForReady: "Aguarde todos os jogadores ficarem prontos",
     copy: "Copiar",
     copied: "Copiado!",
+    copyError: "Não foi possível copiar o código da sala",
     ready: "Ficar Pronto",
     readyDone: "✓ Pronto",
     startGame: "Iniciar Jogo",

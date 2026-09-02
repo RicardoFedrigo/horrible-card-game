@@ -22,6 +22,7 @@ interface GameStore {
   submissionConfirmed: boolean;
   roundHistory: RoundRecord[];
   winnerMessage: string | null;
+  roomPassword: string | null;
   setRoom: (room: Room | null) => void;
   setPlayer: (player: Player | null) => void;
   setConnected: (isConnected: boolean) => void;
@@ -35,6 +36,7 @@ interface GameStore {
   setSubmissionConfirmed: (confirmed: boolean) => void;
   addRoundRecord: (record: RoundRecord) => void;
   setWinnerMessage: (message: string | null) => void;
+  setRoomPassword: (password: string | null) => void;
   resetRoom: () => void;
 }
 
@@ -50,6 +52,7 @@ export const useGameStore = create<GameStore>((set) => ({
   submissionConfirmed: false,
   roundHistory: [],
   winnerMessage: null,
+  roomPassword: null,
   setRoom: (room) => set({ room }),
   setPlayer: (player) => set({ player }),
   setConnected: (isConnected) => set({ isConnected }),
@@ -67,6 +70,7 @@ export const useGameStore = create<GameStore>((set) => ({
       roundHistory: [...state.roundHistory, record],
     })),
   setWinnerMessage: (message) => set({ winnerMessage: message }),
+  setRoomPassword: (roomPassword) => set({ roomPassword }),
   resetRoom: () =>
     set({
       room: null,
@@ -77,5 +81,6 @@ export const useGameStore = create<GameStore>((set) => ({
       submissionConfirmed: false,
       roundHistory: [],
       winnerMessage: null,
+      roomPassword: null,
     }),
 }));

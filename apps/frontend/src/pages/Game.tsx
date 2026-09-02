@@ -98,6 +98,7 @@ export const GamePage = () => {
   const roundHistory = useGameStore((state) => state.roundHistory);
   const setError = useGameStore((state) => state.setError);
   const winnerMessage = useGameStore((state) => state.winnerMessage);
+  const roomPassword = useGameStore((state) => state.roomPassword);
 
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -207,14 +208,40 @@ export const GamePage = () => {
     backToLobby();
   };
 
-  const handleCopyCode = async () => {
-    if (!roomCode) return;
+  const copyToClipboard = (text: string): boolean => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {
+        setError(t("game.copyError"));
+      });
+      return true;
+    }
+
     try {
-      await navigator.clipboard.writeText(roomCode);
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (!successful) {
+        setError(t("game.copyError"));
+        return false;
+      }
+      return true;
+    } catch {
+      setError(t("game.copyError"));
+      return false;
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (!roomCode) return;
+    if (copyToClipboard(roomCode)) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError("Could not copy room code");
     }
   };
 
@@ -271,6 +298,15 @@ export const GamePage = () => {
                 {code}
               </Box>
             </Typography>
+
+            {roomPassword && (
+              <Typography variant="body2" color="text.secondary">
+                {t("home.password")}:{" "}
+                <Box component="span" sx={roomCodeStyles}>
+                  {roomPassword}
+                </Box>
+              </Typography>
+            )}
           </Box>
 
           <Box sx={headerPhaseStyles}>

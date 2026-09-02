@@ -61,6 +61,7 @@ export const useSocket = (): UseSocketReturn => {
       language?: string,
     ) => {
       const socket = getOrInitializeSocket();
+      useGameStore.getState().setRoomPassword(password?.trim() || null);
       socket.emit("create-room", {
         numberOfrounds: 5,
         maxPlayers: 10,
@@ -80,6 +81,7 @@ export const useSocket = (): UseSocketReturn => {
   const joinRoom = useCallback(
     (codeRoom: string, playerName: string, password?: string) => {
       const socket = getOrInitializeSocket();
+      useGameStore.getState().setRoomPassword(password?.trim() || null);
       socket.emit("join-room", {
         codeRoom,
         name: playerName,
