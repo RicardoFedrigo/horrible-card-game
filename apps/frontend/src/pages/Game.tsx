@@ -58,9 +58,6 @@ import {
   roomCodeLabelStyles,
   roomCodeValueStyles,
   playingContainerStyles,
-  deckPileRowStyles,
-  deckSectionStyles,
-  deckSectionLabelStyles,
   questionContainerStyles,
   questionTextStyles,
   submissionsSectionStyles,
@@ -134,7 +131,6 @@ export const GamePage = () => {
     players.length > 0 && players.every((p) => p.status === "ready");
   const maxSelections = currentBlackCard?.pick ?? 1;
   const playerHand = currentPlayer?.cardsInHand ?? [];
-  const deckCount = room?.deckCount ?? 50;
 
   const hasVoted = votes.some((v) => v.voterPlayerId === currentPlayerId);
 
@@ -548,19 +544,6 @@ export const GamePage = () => {
                         </Typography>
                       </Box>
                     )}
-
-                    <Box sx={deckPileRowStyles}>
-                      <Box sx={deckSectionStyles}>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          sx={deckSectionLabelStyles}
-                        >
-                          {t("game.deck")}
-                        </Typography>
-                        <CardDeck type="black" count={deckCount} />
-                      </Box>
-                    </Box>
 
                     {/* Question - centered plain text */}
                     <Box sx={questionContainerStyles}>
