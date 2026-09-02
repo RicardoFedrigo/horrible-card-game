@@ -2,8 +2,15 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 
-const PORT = Number(process.env.PORT) || 80;
+const PORT = Number(process.env.PORT) || 8080;
 const ROOT = new URL('./dist/', import.meta.url).pathname;
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+};
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -29,7 +36,7 @@ createServer(async (req, res) => {
 
     let filePath = normalize(join(ROOT, pathname));
     if (!filePath.startsWith(ROOT)) {
-      res.writeHead(403);
+      res.writeHead(403, SECURITY_HEADERS);
       return res.end('Forbidden');
     }
 
@@ -44,13 +51,14 @@ createServer(async (req, res) => {
     const ext = extname(filePath);
 
     res.writeHead(200, {
+      ...SECURITY_HEADERS,
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Cache-Control':
         ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
     });
     res.end(data);
   } catch {
-    res.writeHead(404);
+    res.writeHead(404, SECURITY_HEADERS);
     res.end('Not Found');
   }
 }).listen(PORT, () => {
