@@ -4,6 +4,8 @@ import { Player } from '../../player/models/player';
 import { ConfigRoom } from '../types/config-room.types';
 
 export class RoomManager {
+  private static readonly MAX_ROOMS = 1000;
+
   private rooms = new Map<string, Room>();
 
   create(roomId: string, password?: string, onPhaseChange?: (room: Room, previousPhase: string) => void): Room {
@@ -11,6 +13,10 @@ export class RoomManager {
 
     if (this.rooms.has(roomIdTrated)) {
       throw new Error('Room already exists');
+    }
+
+    if (this.rooms.size >= RoomManager.MAX_ROOMS) {
+      throw new Error('Too many rooms');
     }
 
     const room = new Room(roomIdTrated, password, onPhaseChange);

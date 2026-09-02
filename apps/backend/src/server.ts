@@ -12,15 +12,41 @@ import { WinnerMessages } from './db/static-db/winner-messages';
 
 const app = express();
 
-app.use(cors());
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOrigin = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : '*';
+
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: corsOrigin,
   },
+});
+
+// Basic connection rate limiting to blunt socket flooding / memory exhaustion.
+const CONNECTION_WINDOW_MS = 60_000;
+const MAX_CONNECTIONS_PER_WINDOW = 60;
+const connectionsByIp = new Map<string, number[]>();
+
+io.use((socket, next) => {
+  const ip = socket.handshake.address || 'unknown';
+  const now = Date.now();
+  const recent = (connectionsByIp.get(ip) ?? []).filter(
+    (t) => now - t < CONNECTION_WINDOW_MS,
+  );
+  if (recent.length >= MAX_CONNECTIONS_PER_WINDOW) {
+    return next(new Error('Too many connections'));
+  }
+  recent.push(now);
+  connectionsByIp.set(ip, recent);
+  next();
 });
 
 const roomManager = new RoomManager();
@@ -444,6 +470,19 @@ io.on('connection', (socket) => {
 server.listen(3000, () => {
   console.log('Server running on 3000');
 });
+
+// Periodically drop stale connection-rate timestamps to bound memory usage.
+setInterval(() => {
+  const cutoff = Date.now() - CONNECTION_WINDOW_MS;
+  for (const [ip, timestamps] of connectionsByIp.entries()) {
+    const recent = timestamps.filter((t) => t >= cutoff);
+    if (recent.length === 0) {
+      connectionsByIp.delete(ip);
+    } else {
+      connectionsByIp.set(ip, recent);
+    }
+  }
+}, CONNECTION_WINDOW_MS);
 
 // Broadcast timer ticks to all active rooms
 setInterval(() => {

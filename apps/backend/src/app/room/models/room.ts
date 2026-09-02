@@ -585,6 +585,10 @@ export class Room {
       throw new Error('Invalid password');
     }
 
+    if (this.players.length >= this.configGame.maxPlayers) {
+      throw new Error('Room is full');
+    }
+
     if (this.players.find((p) => p.getId() === player.getId())) {
       throw new Error('Player already in the room');
     }
