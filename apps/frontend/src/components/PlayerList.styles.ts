@@ -10,7 +10,13 @@ export const titleStyles: SxProps<Theme> = {
     color: 'text.secondary',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    mb: 2,
+};
+
+export const headerStyles: SxProps<Theme> = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    mb: 1,
 };
 
 export const listStyles: SxProps<Theme> = {
