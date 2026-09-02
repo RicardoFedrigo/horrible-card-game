@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import { randomUUID } from 'node:crypto';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { ConfigRoom } from './app/room/types/config-room.types';
@@ -147,23 +148,29 @@ io.on('connection', (socket) => {
   // Create Room
   socket.on('create-room', function (config: ConfigRoom) {
     try {
-      const playerId = config.playerId ?? socket.id;
+      const playerId = randomUUID();
       const roomCreated = roomService.createRoom(config, playerId, onRoomStateChange);
       const roomCodeUpper = config.codeRoom.toUpperCase();
       socketToPlayer.set(socket.id, { roomCode: roomCodeUpper, playerId });
       console.log(`Room created: ${config.codeRoom} by ${playerId}`);
 
       socket.join(roomCodeUpper);
+
+      const room = roomManager.getRoom(roomCodeUpper);
+      const player = room.getPlayers().find((p: any) => p.getId() === playerId);
+      const reconnectToken = player?.getReconnectToken();
       
       // Emit room-created with the expected { room, playerId } structure
       socket.emit('room-created', {
         room: roomCreated.room,
-        playerId: roomCreated.playerId,
+        playerId,
+        reconnectToken,
       });
       // Also emit standard room sync
       socket.emit('room', {
         room: roomCreated.room,
-        playerId: roomCreated.playerId,
+        playerId,
+        reconnectToken,
       });
     } catch (error) {
       console.error(`Error creating room:`, error);
@@ -176,7 +183,7 @@ io.on('connection', (socket) => {
   // Join Room
   socket.on('join-room', (joinRoom: JoinRoom) => {
     try {
-      const playerId = joinRoom.playerId ?? socket.id;
+      const playerId = randomUUID();
       const roomJoined = roomService.joinRoom(joinRoom, playerId);
       console.log(`Player ${joinRoom.name} joined room: ${joinRoom.codeRoom}`);
 
@@ -186,15 +193,19 @@ io.on('connection', (socket) => {
 
       const room = roomManager.getRoom(joinRoom.codeRoom);
       const roomView = roomPresenter.mapRoom(room);
+      const player = room.getPlayers().find((p: any) => p.getId() === playerId);
+      const reconnectToken = player?.getReconnectToken();
 
       // Emit room joining sync back to the joining socket
       socket.emit('room', {
         room: roomView,
         playerId,
+        reconnectToken,
       });
       socket.emit('roomJoined', {
         room: roomView,
         playerId,
+        reconnectToken,
       });
 
       // Broadcast the complete updated room view to all players in the room
@@ -213,20 +224,21 @@ io.on('connection', (socket) => {
   });
 
   // Reconnect: re-associate a new socket connection with an existing player.
-  socket.on('rejoin', (payload: { roomCode: string; playerId: string }) => {
+  socket.on('rejoin', (payload: { roomCode: string; playerId: string; reconnectToken?: string }) => {
     try {
       const roomCodeUpper = (payload?.roomCode || '').toUpperCase();
       const playerId = payload?.playerId;
+      const reconnectToken = payload?.reconnectToken;
       if (!roomCodeUpper || !playerId) {
         return;
       }
 
       const room = roomManager.getRoom(roomCodeUpper);
-      const exists = room
+      const player = room
         .getPlayers()
-        .some((p: any) => p.getId() === playerId);
+        .find((p: any) => p.getId() === playerId);
 
-      if (!exists) {
+      if (!player || !reconnectToken || player.getReconnectToken() !== reconnectToken) {
         socket.emit('error', { message: 'Player not found in room' });
         return;
       }
@@ -243,7 +255,7 @@ io.on('connection', (socket) => {
       }
 
       const roomView = roomPresenter.mapRoom(room);
-      socket.emit('room', { room: roomView, playerId });
+      socket.emit('room', { room: roomView, playerId, reconnectToken });
     } catch (error) {
       console.error(`Error rejoining room:`, error);
     }

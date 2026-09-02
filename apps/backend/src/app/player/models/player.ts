@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { Card } from '../../game/card/models/card';
 import { PlayerStatus } from '../types/player-status.type';
 
@@ -6,6 +6,7 @@ export class Player {
   private points: number = 0;
   private cards: Card[] = [];
   private status: PlayerStatus = 'waiting';
+  private readonly reconnectToken: string;
 
   constructor(
     private name: string,
@@ -14,10 +15,15 @@ export class Player {
   ) {
     this.name = name;
     this.isAdmin = isAdmin;
+    this.reconnectToken = randomBytes(32).toString('hex');
   }
 
   getId(): string {
     return this.id;
+  }
+
+  getReconnectToken(): string {
+    return this.reconnectToken;
   }
 
   getName(): string {
