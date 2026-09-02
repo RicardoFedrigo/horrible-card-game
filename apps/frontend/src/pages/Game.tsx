@@ -572,6 +572,43 @@ export const GamePage = () => {
                           {t("game.pickCards", { count: maxSelections })}
                         </Typography>
                       )}
+
+                      {gamePhase === "results" && (
+                        <>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                            sx={{
+                              mt: 2,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.08em",
+                            }}
+                          >
+                            {t("game.winningAnswer")}
+                          </Typography>
+                          {winnerIds.map((id) => {
+                            const winningSubmission = submissions.find(
+                              (s) => s.playerId === id,
+                            );
+                            return winningSubmission?.cards.map((card) => (
+                              <Typography
+                                key={card.id}
+                                variant="h5"
+                                fontWeight={700}
+                                textAlign="center"
+                                color="success.main"
+                                sx={{
+                                  mt: 1,
+                                  maxWidth: 720,
+                                  animation: "answer-wind 0.9s ease both",
+                                }}
+                              >
+                                {card.text}
+                              </Typography>
+                            ));
+                          })}
+                        </>
+                      )}
                     </Box>
 
                     {/* Submissions - show during playing/judging only */}
@@ -696,50 +733,6 @@ export const GamePage = () => {
                 >
                   {t("game.tie")}
                 </Typography>
-              )}
-
-              {/* Black card + winning answer */}
-              {currentBlackCard && (
-                <Box
-                  sx={{
-                    mt: 3,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 2,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    sx={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {t("game.winningAnswer")}
-                  </Typography>
-                  {winnerIds.map((id) => {
-                    const winningSubmission = submissions.find(
-                      (s) => s.playerId === id,
-                    );
-                    return winningSubmission?.cards.map((card) => (
-                      <Typography
-                        key={card.id}
-                        variant="h5"
-                        fontWeight={700}
-                        textAlign="center"
-                        color="success.main"
-                        sx={{
-                          maxWidth: 720,
-                          animation: "answer-wind 0.9s ease both",
-                        }}
-                      >
-                        {card.text}
-                      </Typography>
-                    ));
-                  })}
-                </Box>
               )}
 
               {timerRemaining !== null && (
